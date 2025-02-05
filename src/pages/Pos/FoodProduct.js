@@ -1,0 +1,641 @@
+import React, { useState, useEffect } from "react"
+import {
+  CardBody,
+  CardHeader,
+  Container,
+  Row,
+  Col,
+  Card,
+  CardTitle,
+  Form,
+  Label,
+  Input,
+  Button,
+  Table,
+  Modal,
+} from "reactstrap"
+import Breadcrumbs from "../../components/Common/Breadcrumb"
+import { ToastContainer, toast } from "react-toastify"
+import ReactPaginate from "react-paginate"
+import axios from "axios"
+import { URLS } from "../../Url"
+
+const Banner = () => {
+  const [modal_small, setmodal_small] = useState(false)
+  const [banner, setbanner] = useState([])
+  const [form, setform] = useState([])
+  const [form1, setform1] = useState([])
+  const [show, setshow] = useState(false)
+  const [Files, setFiles] = useState("")
+  const [Files1, setFiles1] = useState("")
+
+  const changeHandler = e => {
+    const file = e.target.files
+    var ext = file[0].name.split(".").pop()
+    var type = ext
+    if (type == "jpg" || type == "jpeg" || type == "png") {
+      setFiles(e.target.files)
+    } else {
+      e.target.value = null
+      toast("file format not supported.Pls choose Image")
+    }
+  }
+  const changeHandler1 = e => {
+    const file = e.target.files
+    var ext = file[0].name.split(".").pop()
+    var type = ext
+    if (type == "jpg" || type == "jpeg" || type == "png") {
+      setFiles1(e.target.files)
+    } else {
+      e.target.value = null
+      toast("file format not supported.Pls choose Image")
+    }
+  }
+
+  function tog_small() {
+    setmodal_small(!modal_small)
+  }
+
+  const handleChange = e => {
+    let myUser = { ...form }
+    myUser[e.target.name] = e.target.value
+    setform(myUser)
+  }
+  const handleChange1 = e => {
+    let myUser = { ...form1 }
+    myUser[e.target.name] = e.target.value
+    setform1(myUser)
+  }
+
+  useEffect(() => {
+    GetAllBanners()
+  }, [])
+
+  var gets = localStorage.getItem("authUser")
+  var data = JSON.parse(gets)
+  var datas = data.token
+
+  const [listPerPage] = useState(5)
+  const [pageNumber, setPageNumber] = useState(0)
+
+  const pagesVisited = pageNumber * listPerPage
+  const lists = banner.slice(pagesVisited, pagesVisited + listPerPage)
+  const pageCount = Math.ceil(banner.length / listPerPage)
+  const changePage = ({ selected }) => {
+    setPageNumber(selected)
+  }
+
+  const handleSubmit = e => {
+    e.preventDefault()
+    AddBanner()
+  }
+
+  const AddBanner = () => {
+    var token = datas
+    const dataArray = new FormData()
+    dataArray.append("categoryId", form.categoryId)
+    dataArray.append("name", form.name)
+    dataArray.append("foodType", form.foodType)
+    for (let i = 0; i < Files.length; i++) {
+      dataArray.append("image", Files[i])
+    }
+    axios
+      .post(URLS.AddFoodProducts, dataArray, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(
+        res => {
+          if (res.status === 200) {
+            toast(res.data.message)
+            GetAllBanners()
+            clearForm()
+            setshow(false)
+          }
+        },
+        error => {
+          if (error.response && error.response.status === 400) {
+            toast(error.response.data.message)
+          }
+        }
+      )
+  }
+
+  const EditBanner = () => {
+    var token = datas
+    var formid = form1._id
+    const dataArray = new FormData()
+    dataArray.append("categoryId", form1.categoryId)
+    dataArray.append("name", form1.name)
+    dataArray.append("foodType", form1.foodType)
+    for (let i = 0; i < Files1.length; i++) {
+      dataArray.append("image", Files1[i])
+    }
+    axios
+      .put(URLS.UpdateFoodProducts + formid, dataArray, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(
+        res => {
+          if (res.status === 200) {
+            toast(res.data.message)
+            GetAllBanners()
+            setmodal_small(false)
+            clearForm1()
+          }
+        },
+        error => {
+          if (error.response && error.response.status === 400) {
+            toast(error.response.data.message)
+          }
+        }
+      )
+  }
+
+  const DeleteBanner = data => {
+    var token = datas
+    var remid = data._id
+    axios
+      .delete(URLS.DeleteFoodProducts + remid, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(
+        res => {
+          if (res.status === 200) {
+            toast(res.data.message)
+            GetAllBanners()
+          }
+        },
+        error => {
+          if (error.response && error.response.status === 400) {
+            toast(error.response.data.message)
+          }
+        }
+      )
+  }
+
+  const manageDelete = data => {
+    const confirmBox = window.confirm("Do you really want to Delete?")
+    if (confirmBox === true) {
+      DeleteBanner(data)
+    }
+  }
+
+  const handleSubmit1 = e => {
+    e.preventDefault()
+    EditBanner()
+  }
+
+  const GetAllBanners = () => {
+    var token = datas
+    axios
+      .post(
+        URLS.GetFoodProducts,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(res => {
+        setbanner(res.data.foodproducts)
+      })
+  }
+
+  const clearForm1 = () => {
+    setFiles1({
+      image: "",
+    })
+  }
+
+  const clearForm = () => {
+    setform({
+      name: "",
+      categoryId: "",
+      foodType: "",
+    })
+    setFiles({
+      image: "",
+    })
+  }
+
+  const getpopup = data => {
+    setform1(data)
+
+    tog_small()
+  }
+
+  const [search, setsearch] = useState([])
+
+  const searchAll = e => {
+    let myUser = { ...search }
+    myUser[e.target.name] = e.target.value
+    setsearch(myUser)
+
+    var token = datas
+    axios
+      .post(
+        URLS.GetFoodProductsSearch + `${e.target.value}`,
+        {},
+
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(res => {
+        setbanner(res.data.foodproducts)
+      })
+  }
+  var gets = localStorage.getItem("authUser")
+  var data = JSON.parse(gets)
+
+  const [Category, setCategory] = useState([])
+
+  useEffect(() => {
+    GetProducts()
+  }, [])
+
+  const GetProducts = () => {
+    var token = datas
+
+    axios
+      .post(
+        URLS.GetFoodCategory,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      .then(res => {
+        setCategory(res.data.Foodcategories)
+      })
+  }
+
+  var gets = localStorage.getItem("authUser")
+  var data = JSON.parse(gets)
+  var Roles = data?.rolesAndPermission[0];
+
+  return (
+    <React.Fragment>
+      <div className="page-content">
+        <Container fluid>
+          <Breadcrumbs
+            title="Carnival Castle Admin"
+            breadcrumbItem="Food Products"
+          />
+          <Row>
+            {show == true ? (
+              <Col md={12}>
+                <Card>
+                  <CardHeader className="bg-white">
+                    <CardTitle>Add Food Product</CardTitle>
+                  </CardHeader>
+                  <CardBody>
+                    <Form
+                      onSubmit={e => {
+                        handleSubmit(e)
+                      }}
+                    >
+                      <Row>
+                        <Col md="4">
+                          <div className="mb-3">
+                            <Label>Category</Label>
+                            <span className="text-danger">*</span>
+                            <select
+                              value={form.categoryId}
+                              name="categoryId"
+                              required
+                              onChange={e => {
+                                handleChange(e)
+                              }}
+                              className="form-select"
+                            >
+                              <option value="">Select</option>
+                              {Category.map((data, key) => {
+                                return (
+                                  <option key={key} value={data._id}>
+                                    {data.name}
+                                  </option>
+                                )
+                              })}
+                            </select>
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="mb-3">
+                            <Label for="basicpill-firstname-input1">
+                              Name <span className="text-danger">*</span>
+                            </Label>
+                            <Input
+                              type="text"
+                              className="form-control"
+                              id="basicpill-firstname-input1"
+                              placeholder="Enter Name"
+                              required
+                              name="name"
+                              value={form.name}
+                              onChange={e => {
+                                handleChange(e)
+                              }}
+                            />
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="mb-3">
+                            <Label for="basicpill-firstname-input1">
+                              Image <span className="text-danger">*</span>
+                            </Label>
+                            <Input
+                              type="file"
+                              className="form-control"
+                              id="basicpill-firstname-input1"
+                              required
+                              name="image"
+                              value={Files.image}
+                              onChange={changeHandler}
+                            />
+                          </div>
+                        </Col>
+                        <Col md="4">
+                          <div className="mb-3">
+                            <Label>Type</Label>
+                            <span className="text-danger">*</span>
+                            <select
+                              value={form.foodType}
+                              name="foodType"
+                              required
+                              onChange={e => {
+                                handleChange(e)
+                              }}
+                              className="form-select"
+                            >
+                              <option value="">Select</option>
+                              <option value="Veg">Veg</option>
+                              <option value="Non-veg">Non-Veg</option>
+                            </select>
+                          </div>
+                        </Col>
+                        <Col md={12}>
+                          <div style={{ float: "right" }}>
+                            <Button color="primary" type="submit">
+                              Submit <i className="fas fa-check-circle"></i>
+                            </Button>
+                          </div>
+                        </Col>
+                      </Row>
+                    </Form>
+                  </CardBody>
+                </Card>
+              </Col>
+            ) : (
+              ""
+            )}
+            <Col md={12}>
+              <Card>
+                <CardHeader className="bg-white">
+                  <CardTitle>Food Product List</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <div>
+                    <Row>
+                    {Roles.foodProductAdd  || Roles?.accessAll === true ?<> 
+                      <Col>
+                        <Button
+                          onClick={() => {
+                            setshow(!show)
+                          }}
+                          color="primary"
+                        >
+                          Add Products List<i className="bx bx-plus"></i>
+                        </Button>
+                      </Col></>:""}
+                      <Col>
+                        <div style={{ float: "right" }}>
+                          <Input
+                            type="text"
+                            className="form-control"
+                            placeholder="Search.."
+                            value={search.search}
+                            onChange={searchAll}
+                            name="search"
+                          />
+                        </div>
+                      </Col>
+                    </Row>
+                    <div className="table-responsive">
+                      <Table className="table table-bordered mb-4 mt-5">
+                        <thead>
+                          <tr className="text-center">
+                            <th>S.No</th>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Category Name</th>
+                            <th>Type</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lists.map((data, key) => (
+                            <tr key={key} className="text-center">
+                              <td>{(pageNumber - 1) * 5 + key + 6}</td>
+                              <td>
+                                <img
+                                  style={{ width: "100px" }}
+                                  src={URLS.Base + data.image}
+                                />
+                              </td>
+                              <td>{data.name}</td>
+                              <td>{data.categoryName}</td>
+                              <td>{data.foodType}</td>
+                              <td>
+                              {Roles.foodProductEdit  || Roles?.accessAll === true ?<> 
+                                <Button
+                                  onClick={() => {
+                                    getpopup(data)
+                                  }}
+                                  className="mr-2"
+                                  style={{
+                                    padding: "6px",
+                                    margin: "3px",
+                                  }}
+                                  color="success"
+                                  outline
+                                >
+                                  <i className="bx bx-edit "></i>
+                                </Button></>:""}
+                                {Roles.foodProductDelete  || Roles?.accessAll === true ?<> 
+                                <Button
+                                  onClick={() => {
+                                    manageDelete(data)
+                                  }}
+                                  style={{
+                                    padding: "6px",
+                                    margin: "3px",
+                                  }}
+                                  color="danger"
+                                  outline
+                                >
+                                  <i className="bx bx-trash"></i>
+                                </Button></>:""}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                      <div className="mt-3" style={{ float: "right" }}>
+                        <ReactPaginate
+                          previousLabel={"Previous"}
+                          nextLabel={"Next"}
+                          pageCount={pageCount}
+                          onPageChange={changePage}
+                          containerClassName={"pagination"}
+                          previousLinkClassName={"previousBttn"}
+                          nextLinkClassName={"nextBttn"}
+                          disabledClassName={"disabled"}
+                          activeClassName={"active"}
+                          total={lists.length}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
+        <Modal
+          size="lg"
+          isOpen={modal_small}
+          toggle={() => {
+            tog_small()
+          }}
+          centered
+        >
+          <div className="modal-header">
+            <h5 className="modal-title mt-0" id="mySmallModalLabel">
+              Edit Food Product
+            </h5>
+            <button
+              onClick={() => {
+                setmodal_small(false)
+              }}
+              type="button"
+              className="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div className="modal-body">
+            <Form
+              onSubmit={e => {
+                handleSubmit1(e)
+              }}
+            >
+              <Row>
+                <Col md={6}>
+                  <div className="mb-3">
+                    <Label for="basicpill-firstname-input1">
+                      Name <span className="text-danger">*</span>
+                    </Label>
+                    <Input
+                      type="text"
+                      className="form-control"
+                      id="basicpill-firstname-input1"
+                      placeholder="Enter Name"
+                      required
+                      name="name"
+                      value={form1.name}
+                      onChange={e => {
+                        handleChange1(e)
+                      }}
+                    />
+                  </div>
+                </Col>
+                <Col md={6}>
+                  <div className="mb-3">
+                    <Label for="basicpill-firstname-input1">
+                      Image <span className="text-danger">*</span>
+                    </Label>
+                    <Input
+                      type="file"
+                      className="form-control"
+                      id="basicpill-firstname-input1"
+                      name="image"
+                      value={Files1.image}
+                      onChange={changeHandler1}
+                    />
+                  </div>
+                </Col>
+                <Col md="6">
+                  <div className="mb-3">
+                    <Label>Category</Label>
+                    <span className="text-danger">*</span>
+                    <select
+                      value={form1.categoryId}
+                      name="categoryId"
+                      required
+                      onChange={e => {
+                        handleChange1(e)
+                      }}
+                      className="form-select"
+                    >
+                      <option value="">Select</option>
+                      {Category.map((data, key) => {
+                        return (
+                          <option key={key} value={data._id}>
+                            {data.name}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+                </Col>
+                <Col md="6">
+                  <div className="mb-3">
+                    <Label>Type</Label>
+                    <span className="text-danger">*</span>
+                    <select
+                      value={form1.foodType}
+                      name="foodType"
+                      required
+                      onChange={e => {
+                        handleChange1(e)
+                      }}
+                      className="form-select"
+                    >
+                      <option value="">Select</option>
+                      <option value="Veg">Veg</option>
+                      <option value="Non-veg">Non-Veg</option>
+                    </select>
+                  </div>
+                </Col>
+              </Row>
+              <hr></hr>
+              <Row>
+                <Col md={12}>
+                  <div style={{ float: "right" }}>
+                    <Button
+                      onClick={() => {
+                        setmodal_small(false)
+                      }}
+                      color="danger"
+                      type="button"
+                    >
+                      Cancel <i className="fas fa-times-circle"></i>
+                    </Button>
+                    <Button className="m-1" color="primary" type="submit">
+                      Submit <i className="fas fa-check-circle"></i>
+                    </Button>
+                  </div>
+                </Col>
+              </Row>
+            </Form>
+          </div>
+        </Modal>
+        <ToastContainer />
+      </div>
+    </React.Fragment>
+  )
+}
+
+export default Banner
